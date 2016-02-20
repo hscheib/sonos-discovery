@@ -1,6 +1,8 @@
-# sonos-discovery
+# sonos-discovery 
 
-For implementation, see discovery.Discovery.main()
+###### Easily discover sonos devices on your network and interact with them
+
+###### For implementation, see discovery.Discovery.main()
 
 To run : gradlew run
 

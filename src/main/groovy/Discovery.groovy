@@ -1,3 +1,9 @@
+package discovery
+
+import discovery.sonos.SonosDeviceFactory
+import discovery.sonos.SonosSystem
+import discovery.sonos.constants.SonosDeviceTypes
+
 class Discovery {
     //if on wireless network add to VM args -Djava.net.preferIPv4Stack=true
     public static void main(String... args) {

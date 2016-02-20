@@ -1,3 +1,10 @@
+package discovery.sonos
+
+import discovery.protocol.SimpleServiceDiscoveryProtocol
+import discovery.sonos.constants.SonosDeviceTypes
+import discovery.sonos.device.SonosDevice
+
+
 class SonosDeviceFactory {
 
     List<Map> sonosDiscoveryResponses

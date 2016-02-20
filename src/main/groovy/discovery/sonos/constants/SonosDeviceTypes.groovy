@@ -1,3 +1,5 @@
+package discovery.sonos.constants
+
 class SonosDeviceTypes {
     static final String SUB = "ANVIL"
     static final String PLAYBAR = "ZPS9"

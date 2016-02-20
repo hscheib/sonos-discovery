@@ -1,3 +1,5 @@
+package discovery.protocol
+
 class SimpleServiceDiscoveryProtocol {
 
     String ssdpMulticastIp = "239.255.255.250"

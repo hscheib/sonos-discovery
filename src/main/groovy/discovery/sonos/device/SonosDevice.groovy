@@ -1,3 +1,5 @@
+package discovery.sonos.device
+
 import wslite.soap.SOAPClient
 
 class SonosDevice {

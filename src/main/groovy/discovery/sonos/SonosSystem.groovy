@@ -1,3 +1,8 @@
+package discovery.sonos
+
+import discovery.sonos.device.SonosDevice
+
+
 class SonosSystem {
     List<SonosDevice> allDevices = []
 

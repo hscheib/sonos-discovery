@@ -29,5 +29,5 @@ dependencies {
 
 applicationDefaultJvmArgs = ["-Djava.net.preferIPv4Stack=true"]
 
-mainClassName = 'Client'
+mainClassName = 'Discovery'
 

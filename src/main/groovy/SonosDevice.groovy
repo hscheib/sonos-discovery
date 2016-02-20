@@ -6,11 +6,13 @@ class SonosDevice {
     List usnList = []
     String deviceDescriptionLocation
     String hostname
+    String deviceType
 
 // example SOAP action
 // new SonosDevice("http://192.168.1.124:1400/DeviceProperties/Control").subscribe('urn:schemas-upnp-org:service:DeviceProperties:1#GetZoneAttributes')
 
-    SonosDevice(List<Map> deviceResponses) {
+    SonosDevice(List<Map> deviceResponses, String deviceType) {
+        this.deviceType = deviceType
         parseDeviceResponses(deviceResponses)
     }
 

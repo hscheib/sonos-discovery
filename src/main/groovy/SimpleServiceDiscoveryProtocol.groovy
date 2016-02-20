@@ -37,6 +37,7 @@ class SimpleServiceDiscoveryProtocol {
         recSocket.setSoTimeout(1000)
         recSocket.joinGroup(InetAddress.getByName(ssdpMulticastIp))
         def currentMs = System.currentTimeMillis()
+        println "Discovering for $discoveryTimeout seconds..."
         while (System.currentTimeMillis() - currentMs < (discoveryTimeout * 1000)) {
             byte[] buf = new byte[2048]
             DatagramPacket input = new DatagramPacket(buf, buf.length)

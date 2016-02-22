@@ -1,6 +1,8 @@
 # sonos-discovery 
 
-###### Easily discover sonos devices on your network and interact with them
+###### The goal of this project is to easily discover Sonos devices on your network and interact with them. 
+
+###### The project is still in development and not fully functional.
 
 ###### For implementation, see discovery.Discovery.main()
 

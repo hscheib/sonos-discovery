@@ -1,6 +1,8 @@
-# sonos-discovery
+# sonos-discovery 
 
-For implementation, see discovery.Discovery.main()
+###### The goal of this project is to easily discover Sonos devices on your network and interact with them. The project is still in development and not fully functional.
+
+###### For implementation, see discovery.Discovery.main()
 
 To run : gradlew run
 

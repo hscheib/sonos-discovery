@@ -1,7 +1,5 @@
 # sonos-discovery 
 
----
-
 ### Goal of this app:
 The goal of this project is to easily discover Sonos devices on your network and interact with them. The project is still in development and not fully functional.
 

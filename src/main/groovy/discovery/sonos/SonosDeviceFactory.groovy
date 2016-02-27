@@ -1,67 +1,71 @@
 package discovery.sonos
 
 import discovery.protocol.SimpleServiceDiscoveryProtocol
-import discovery.sonos.constants.SonosDeviceTypes
+import discovery.sonos.constants.SonosDeviceType
 import discovery.sonos.device.SonosDevice
-
 
 class SonosDeviceFactory {
 
-    List<Map> sonosDiscoveryResponses
+    List<Map<String, String>> sonosDiscoveryResponses
 
     SonosDeviceFactory() {
-        SimpleServiceDiscoveryProtocol ssdp = new SimpleServiceDiscoveryProtocol()
-        ssdp.sendDiscovery()
-        sonosDiscoveryResponses = ssdp.listenForDiscoveryResponses("Sonos")
+        new SimpleServiceDiscoveryProtocol().with {
+            sendDiscovery()
+            sonosDiscoveryResponses = listenForDiscoveryResponses("Sonos")
+        }
     }
 
-    public SonosSystem getSonosSystem() {
-        Map deviceMap = [:]
-        for (prop in new SonosDeviceTypes().getProperties()) {
-            if (!(prop.getValue().class == Class.class)) {
-                findDevicesForSonosDeviceType(prop, deviceMap)
-
-            }
+    SonosSystem getSonosSystem() {
+        Map<String, SonosDevice> deviceMap = SonosDeviceType.values().collectEntries { SonosDeviceType deviceType ->
+            findDevicesForSonosDeviceType(deviceType)
         }
-        return new SonosSystem(deviceMap.values().flatten())
+
+        return new SonosSystem(deviceMap)
     }
 
-    private void findDevicesForSonosDeviceType(Map.Entry sonosDeviceType, Map deviceMap) {
-        List<Map> responses = sonosDiscoveryResponses.findAll() {
-            it.SERVER.toUpperCase().contains(sonosDeviceType.getValue())
+    private Map<String, SonosDevice> findDevicesForSonosDeviceType(SonosDeviceType deviceType) {
+        Map<String, SonosDevice> deviceMap = [:]
+
+        List<Map<String, String>> responses = sonosDiscoveryResponses.findAll() { Map<String, String> response ->
+            response.SERVER.toUpperCase().contains(deviceType.sonosCode)
         }
-        List locations = getLocationsForResponses(responses)
+
+        List<String> locations = getLocationsForResponses(responses)
         if (locations.size() > 1) {
-            List multiDeviceList = getMultiDeviceList(locations, responses, sonosDeviceType.getValue())
-            multiDeviceList.eachWithIndex { entry, i ->
-                deviceMap[sonosDeviceType.getKey() + "_$i"] = entry
+            List<SonosDevice> multiDeviceList = getMultiDeviceList(locations, responses, deviceType)
+            multiDeviceList.eachWithIndex { SonosDevice sonosDevice, index ->
+                deviceMap[deviceType.name() + "_$index"] = sonosDevice
             }
         } else {
             if (responses.size() > 0) {
-                deviceMap[sonosDeviceType.getKey()] = new SonosDevice(responses, sonosDeviceType.getValue())
+                deviceMap[deviceType.name()] = new SonosDevice(responses, deviceType)
             }
         }
+
+        return deviceMap
     }
 
-    private getMultiDeviceList(locations, responses, deviceType) {
-        def multiDeviceList = []
-        locations.each { String location ->
-            multiDeviceList.add(new SonosDevice(responses.findAll() {
-                it.LOCATION.toUpperCase().contains(location.toUpperCase())
-            }, deviceType))
+    private List<SonosDevice> getMultiDeviceList(List<String> addressesForDeviceType, responses, SonosDeviceType deviceType) {
+        return addressesForDeviceType.collect { String location ->
+            List<Map<String, String>> locationResponsesForSingleLocation = responses.findAll() { Map<String, String> response ->
+                response.LOCATION.toUpperCase().contains(location.toUpperCase())
+            }
+
+            new SonosDevice(locationResponsesForSingleLocation, deviceType)
         }
-        multiDeviceList
     }
 
-    private List getLocationsForResponses(List<Map> responses) {
-        List locations = []
-        responses.eachWithIndex { Map response, index ->
+    private List<String> getLocationsForResponses(List<Map<String, String>> responses) {
+        List<String> responsesForSingleLocation = []
+
+        responses.each { Map<String, String> response ->
             response.each { key, val ->
-                if (key.equals("LOCATION") && !locations.contains(val)) {
-                    locations.add(val)
+                if (key.equals("LOCATION") && !responsesForSingleLocation.contains(val)) {
+                    responsesForSingleLocation << val
                 }
             }
         }
-        locations
+
+        return responsesForSingleLocation
     }
 }

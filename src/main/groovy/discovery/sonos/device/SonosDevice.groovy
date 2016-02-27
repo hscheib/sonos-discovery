@@ -1,6 +1,9 @@
 package discovery.sonos.device
 
+import discovery.sonos.constants.SonosDeviceType
+import groovy.xml.XmlUtil
 import wslite.soap.SOAPClient
+import wslite.soap.SOAPResponse
 
 class SonosDevice {
 
@@ -8,21 +11,23 @@ class SonosDevice {
     List usnList = []
     String deviceDescriptionLocation
     String hostname
-    String deviceType
+    SonosDeviceType deviceType
 
 // example SOAP action
 // new SonosDevice("http://192.168.1.124:1400/DeviceProperties/Control").subscribe('urn:schemas-upnp-org:service:DeviceProperties:1#GetZoneAttributes')
 
-    SonosDevice(List<Map> deviceResponses, String deviceType) {
+    SonosDevice(List<Map> deviceResponses, SonosDeviceType deviceType) {
         this.deviceType = deviceType
         parseDeviceResponses(deviceResponses)
     }
 
-    def subscribe(soapAction) {
-        def response = soapClient.send(SOAPAction: soapAction) {
+    def getZoneAttributes() {
+        SOAPResponse response = soapClient.send(SOAPAction: 'urn:schemas-upnp-org:service:DeviceProperties:1#GetZoneAttributes') {
 
         }
-        println response.httpResponse.contentAsString
+        def x = response.body
+        def rootNode =  new XmlSlurper().parseText(response.text)
+        println XmlUtil.serialize(response.text)
     }
 
     private List<Map> parseDeviceResponses(List<Map> responses) {
@@ -41,6 +46,6 @@ class SonosDevice {
         URL url = new URL(location);
         hostname = url.getProtocol() + "://" + url.getHost() + ":" + url.getPort()
         deviceDescriptionLocation = url.getPath()
-        soapClient = new SOAPClient(hostname)
+        soapClient = new SOAPClient(hostname +"/DeviceProperties/Control" )
     }
 }

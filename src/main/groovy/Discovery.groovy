@@ -2,7 +2,7 @@ package discovery
 
 import discovery.sonos.SonosDeviceFactory
 import discovery.sonos.SonosSystem
-import discovery.sonos.constants.SonosDeviceTypes
+import discovery.sonos.constants.SonosDeviceType
 
 class Discovery {
     public static void main(String... args) {
@@ -10,13 +10,17 @@ class Discovery {
         SonosSystem sonosSystem = new SonosDeviceFactory().getSonosSystem()
 
         if (sonosSystem.allDevices.size() > 0) {
-            println "Sonos system found with $sonosSystem.allDevices.size devices!"
+            println "Sonos system found with ${sonosSystem.allDevices.size()} devices!"
         }
 
-        println "Sub count : " + sonosSystem.getDevicesByType(SonosDeviceTypes.SUB).size()
-        println "Play1 count : " + sonosSystem.getDevicesByType(SonosDeviceTypes.PLAY1).size()
-        println "Bridge count : " + sonosSystem.getDevicesByType(SonosDeviceTypes.BRIDGE).size()
-        println "Play5 count : " + sonosSystem.getDevicesByType(SonosDeviceTypes.PLAY5).size()
+        sonosSystem.getDevicesByType(SonosDeviceType.PLAY3).first().getZoneAttributes()
+
+        println "Sub count : " + sonosSystem.getDevicesByType(SonosDeviceType.SUB).size()
+        println "Play1 count : " + sonosSystem.getDevicesByType(SonosDeviceType.PLAY1).size()
+        println "Play3 count : " + sonosSystem.getDevicesByType(SonosDeviceType.PLAY3).size()
+        println "Play5 count : " + sonosSystem.getDevicesByType(SonosDeviceType.PLAY5).size()
+        println "Playbar count : " + sonosSystem.getDevicesByType(SonosDeviceType.PLAYBAR).size()
+        println "Bridge count : " + sonosSystem.getDevicesByType(SonosDeviceType.BRIDGE).size()
         println "Finished"
     }
 }

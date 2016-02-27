@@ -30,9 +30,15 @@ class SimpleServiceDiscoveryProtocol {
         }
     }
 
-
-    public listenForDiscoveryResponses(String deviceType) {
-        def devices = []
+    /**
+     * This method blocks for a small window of time while it captures datagram packets from
+     * the local network to analyze for the given device type data
+     *
+     * @param deviceType the device type displayed on the desired datagram packet to capture
+     * @return a list of maps of key-value discovery responses
+     */
+    public ArrayList<Map<String, String>> listenForDiscoveryResponses(String deviceType) {
+        ArrayList<Map<String, String>> devices = []
         MulticastSocket recSocket = new MulticastSocket(null)
         recSocket.bind(new InetSocketAddress(InetAddress.getByName("0.0.0.0"), 1901))
         recSocket.setTimeToLive(10)
@@ -45,7 +51,7 @@ class SimpleServiceDiscoveryProtocol {
             DatagramPacket input = new DatagramPacket(buf, buf.length)
             try {
                 recSocket.receive(input)
-                def result = parseData(new String(input.data))
+                Map<String, String> result = parseData(new String(input.data))
                 if (result.SERVER.contains(deviceType)) {
                     devices.add(result)
                 }
@@ -57,8 +63,8 @@ class SimpleServiceDiscoveryProtocol {
         devices
     }
 
-    private Object parseData(String originaldata) {
-        originaldata.split('\r\n').inject([:]) { map, token ->
+    private Map<String, String> parseData(String originaldata) {
+        originaldata.split('\r\n').inject([:]) { LinkedHashMap map, token ->
             try {
                 if (token.contains("Location") || token.contains("LOCATION") || token.contains("USN") || token.contains("UUID")) {
                     //These tokens have multiple ':' that need to be accounted for

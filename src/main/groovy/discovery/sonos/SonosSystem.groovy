@@ -1,18 +1,18 @@
 package discovery.sonos
 
+import discovery.sonos.constants.SonosDeviceType
 import discovery.sonos.device.SonosDevice
 
-
 class SonosSystem {
-    List<SonosDevice> allDevices = []
+    Collection<SonosDevice> allDevices = []
 
-    SonosSystem(devices) {
-        allDevices = devices
+    SonosSystem(Map<String, SonosDevice> deviceMap) {
+        allDevices = deviceMap.values()
     }
 
-    public List<SonosDevice> getDevicesByType(String deviceType){
-        allDevices.findAll(){
-            it.deviceType == deviceType
+    List<SonosDevice> getDevicesByType(SonosDeviceType deviceType){
+        allDevices.findAll() { sonosDevice ->
+            sonosDevice.deviceType == deviceType
         }
     }
 }

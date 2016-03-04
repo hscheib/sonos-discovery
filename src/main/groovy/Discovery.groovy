@@ -3,24 +3,27 @@ package discovery
 import discovery.sonos.SonosDeviceFactory
 import discovery.sonos.SonosSystem
 import discovery.sonos.constants.SonosDeviceType
+import groovy.util.logging.Slf4j
 
+@Slf4j
 class Discovery {
     public static void main(String... args) {
-        println "Starting"
+        log.info "~~~~ Sonos-Discovery Started ~~~~"
         SonosSystem sonosSystem = new SonosDeviceFactory().getSonosSystem()
 
-        if (sonosSystem.allDevices.size() > 0) {
-            println "Sonos system found with ${sonosSystem.allDevices.size()} devices!"
+        if (sonosSystem.allDevices) {
+            log.info "Sonos system found with ${sonosSystem.allDevices.size()} devices!"
         }
 
         sonosSystem.getDevicesByType(SonosDeviceType.PLAY3).first().getZoneAttributes()
 
-        println "Sub count : " + sonosSystem.getDevicesByType(SonosDeviceType.SUB).size()
-        println "Play1 count : " + sonosSystem.getDevicesByType(SonosDeviceType.PLAY1).size()
-        println "Play3 count : " + sonosSystem.getDevicesByType(SonosDeviceType.PLAY3).size()
-        println "Play5 count : " + sonosSystem.getDevicesByType(SonosDeviceType.PLAY5).size()
-        println "Playbar count : " + sonosSystem.getDevicesByType(SonosDeviceType.PLAYBAR).size()
-        println "Bridge count : " + sonosSystem.getDevicesByType(SonosDeviceType.BRIDGE).size()
-        println "Finished"
+        log.info "Sub count : " + sonosSystem.getDevicesByType(SonosDeviceType.SUB).size()
+        log.info "Play1 count : " + sonosSystem.getDevicesByType(SonosDeviceType.PLAY1).size()
+        log.info "Play3 count : " + sonosSystem.getDevicesByType(SonosDeviceType.PLAY3).size()
+        log.info "Play5 count : " + sonosSystem.getDevicesByType(SonosDeviceType.PLAY5).size()
+        log.info "Playbar count : " + sonosSystem.getDevicesByType(SonosDeviceType.PLAYBAR).size()
+        log.info "Bridge count : " + sonosSystem.getDevicesByType(SonosDeviceType.BRIDGE).size()
+
+        log.info "~~~~ Sonos-Discovery Finished ~~~~"
     }
 }

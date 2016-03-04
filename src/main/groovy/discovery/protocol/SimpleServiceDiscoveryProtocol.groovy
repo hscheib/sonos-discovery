@@ -1,34 +1,48 @@
 package discovery.protocol
 
+import com.google.common.base.Stopwatch
+import groovy.util.logging.Slf4j
+
+import java.util.concurrent.TimeUnit
+
+@Slf4j
 class SimpleServiceDiscoveryProtocol {
 
-    String ssdpMulticastIp = "239.255.255.250"
-    int discoveryTimeout = 10
+    public static final String SSDP_MULTICAST_IP = "239.255.255.250"
+    public static final int SSDP_UDP_PORT = 1900
+    public static final int SSDP_TIMEOUT_IN_SECONDS = 10
+    public static final InetSocketAddress SSDP_SOCKET = new InetSocketAddress(SSDP_MULTICAST_IP, SSDP_UDP_PORT)
 
-    SimpleServiceDiscoveryProtocol() {}
+    public static final int LOCALHOST_UDP_PORT = 1901
+    public static final InetSocketAddress LOCALHOST_SOCKET = new InetSocketAddress(InetAddress.getLocalHost(), LOCALHOST_UDP_PORT)
 
-    public void sendDiscovery() {
-        int ssdpUdpPort = 1900
-        InetSocketAddress socketAddress = new InetSocketAddress(InetAddress.getByName(ssdpMulticastIp), ssdpUdpPort)
-        MulticastSocket socket = new MulticastSocket(null)
+    void sendDiscovery() {
+        MulticastSocket socket = null
         try {
-            String myLocalIp = InetAddress.localHost.hostAddress
-            socket.bind(new InetSocketAddress(myLocalIp, 1901))
-            StringBuilder packet = new StringBuilder()
-            packet.append("M-SEARCH * HTTP/1.1\r\n")
-            packet.append("HOST: $ssdpMulticastIp:$ssdpUdpPort\r\n")
-            packet.append("MAN: \"ssdp:discover\"\r\n")
-            packet.append("MX: ").append("$discoveryTimeout").append("\r\n")
-            packet.append("ST: ").append("ssdp:all").append("\r\n").append("\r\n")
-            byte[] data = packet.toString().bytes
-            socket.send(new DatagramPacket(data, data.length, socketAddress))
+            socket = new MulticastSocket(LOCALHOST_SOCKET)
+            socket.send(buildDiscoveryDatagramPacket())
         } catch (IOException e) {
-            throw e
+            log.error("Failed to send discovery datagram due to: $e.message", e)
         } finally {
-            socket.disconnect()
-            socket.close()
+            socket?.disconnect()
+            socket?.close()
         }
     }
+
+    private static DatagramPacket buildDiscoveryDatagramPacket() {
+        String discoveryMessage = "M-SEARCH * HTTP/1.1\r\n" +
+                        "HOST: $SSDP_MULTICAST_IP:$SSDP_UDP_PORT\r\n" +
+                        'MAN: "ssdp:discover"\r\n' +
+                        "MX: $SSDP_TIMEOUT_IN_SECONDS\r\n" +
+                        "ST: ssdp:all\r\n"
+
+        return new DatagramPacket(
+                discoveryMessage.bytes,
+                discoveryMessage.bytes.length,
+                SSDP_SOCKET
+        )
+    }
+
 
     /**
      * This method blocks for a small window of time while it captures datagram packets from
@@ -37,57 +51,72 @@ class SimpleServiceDiscoveryProtocol {
      * @param deviceType the device type displayed on the desired datagram packet to capture
      * @return a list of maps of key-value discovery responses
      */
-    public ArrayList<Map<String, String>> listenForDiscoveryResponses(String deviceType) {
-        ArrayList<Map<String, String>> devices = []
-        MulticastSocket recSocket = new MulticastSocket(null)
-        recSocket.bind(new InetSocketAddress(InetAddress.getByName("0.0.0.0"), 1901))
-        recSocket.setTimeToLive(10)
-        recSocket.setSoTimeout(1000)
-        recSocket.joinGroup(InetAddress.getByName(ssdpMulticastIp))
-        def currentMs = System.currentTimeMillis()
-        println "Discovering for $discoveryTimeout seconds..."
-        while (System.currentTimeMillis() - currentMs < (discoveryTimeout * 1000)) {
-            byte[] buf = new byte[2048]
-            DatagramPacket input = new DatagramPacket(buf, buf.length)
-            try {
-                recSocket.receive(input)
-                Map<String, String> result = parseData(new String(input.data))
-                if (result.SERVER.contains(deviceType)) {
-                    devices.add(result)
-                }
-            } catch (SocketTimeoutException e) {
-            }
+    ArrayList<Map<String, String>> listenForDiscoveryResponses(String deviceType) {
+        ArrayList<Map<String, String>> discoveryResponses = []
+        MulticastSocket receiveSocket = new MulticastSocket(LOCALHOST_SOCKET)
+        receiveSocket.with {
+            setTimeToLive(10)
+            setSoTimeout(1000)
+            joinGroup(SSDP_SOCKET.address)
         }
-        recSocket.disconnect()
-        recSocket.close()
-        devices
+
+        log.info "Discovering for $SSDP_TIMEOUT_IN_SECONDS seconds..."
+
+        Stopwatch timer = Stopwatch.createStarted()
+        while (timer.elapsed(TimeUnit.SECONDS) < SSDP_TIMEOUT_IN_SECONDS) {
+            try {
+                byte[] buffer = new byte[2048]
+                DatagramPacket datagramPacket = new DatagramPacket(buffer, buffer.length)
+
+                receiveSocket.receive(datagramPacket)
+
+                Map<String, String> discoveryResponse = parseRawDiscoveryResponseToMap(datagramPacket.data)
+                if (discoveryResponse.SERVER.contains(deviceType)) {
+                    discoveryResponses.add(discoveryResponse)
+                }
+            } catch (SocketTimeoutException ignored) { }
+        }
+
+        receiveSocket.disconnect()
+        receiveSocket.close()
+
+        return discoveryResponses
     }
 
-    private Map<String, String> parseData(String originaldata) {
-        originaldata.split('\r\n').inject([:]) { LinkedHashMap map, token ->
-            try {
-                if (token.contains("Location") || token.contains("LOCATION") || token.contains("USN") || token.contains("UUID")) {
-                    //These tokens have multiple ':' that need to be accounted for
-                    token.split(':').with {
-                        def value = ""
-                        it.eachWithIndex { String entry, int i ->
-                            if (i == 0) {
-                                // index 0 is the key
-                            } else if (i == 1) {
-                                value += entry
-                            } else {
-                                value += ":" + entry
-                            }
+    /**
+     * This parses responses like the following:
+     *
+     * <pre>
+     *     HTTP/1.1 200 OK
+     *     HOST: 239.255.255.250:1900
+     *     EXT:
+     *     CACHE-CONTROL: max-age=100
+     *     LOCATION: http://192.168.1.131:80/description.xml
+     *     SERVER: Linux/3.14.0 UPnP/1.0 IpBridge/1.10.0
+     *     hue-bridgeid: 001788FFFE24F29C
+     *     ST: urn:schemas-upnp-org:device:basic:1
+     *     USN: uuid:2f402f80-da50-11e1-9b23-00178824f29c
+     * </pre>
+     *
+     * into a key-value map, ignoring lines that do not contain a colon (:).
+     *
+     */
+    private static Map<String, String> parseRawDiscoveryResponseToMap(byte[] rawHttpResponse) {
+        return new String(rawHttpResponse)
+                .split('\r\n')
+                .inject([:]) { LinkedHashMap returnMap, String line ->
+                    if(line.contains(':')){
+                        List<String> splitLine = line.split(':', 2)*.trim().toList()
+
+                        if(containsOnlyTwoEntriesThatAreNotFalsy(splitLine)){
+                            returnMap << [(splitLine[0].toUpperCase()): splitLine[1]]
                         }
-                        map[it[0].toUpperCase()] = value
                     }
-                } else {
-                    token.split(':').with { map[it[0].toUpperCase()] = it[1] }
+                    return returnMap
                 }
-            } catch (e) {
-                //dont care
-            }
-            map
-        }
+    }
+
+    private static boolean containsOnlyTwoEntriesThatAreNotFalsy(List list) {
+        list.size() == 2 && list[0] && list[1]
     }
 }

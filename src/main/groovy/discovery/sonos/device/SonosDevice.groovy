@@ -1,10 +1,12 @@
 package discovery.sonos.device
 
 import discovery.sonos.constants.SonosDeviceType
+import groovy.util.logging.Slf4j
 import groovy.xml.XmlUtil
 import wslite.soap.SOAPClient
 import wslite.soap.SOAPResponse
 
+@Slf4j
 class SonosDevice {
 
     SOAPClient soapClient
@@ -22,12 +24,14 @@ class SonosDevice {
     }
 
     def getZoneAttributes() {
-        SOAPResponse response = soapClient.send(SOAPAction: 'urn:schemas-upnp-org:service:DeviceProperties:1#GetZoneAttributes') {
+        String method = "GetZoneAttributes"
+        SOAPResponse response = soapClient.send(SOAPAction: "urn:schemas-upnp-org:service:DeviceProperties:1#$method") {
 
         }
         def x = response.body
         def rootNode =  new XmlSlurper().parseText(response.text)
-        println XmlUtil.serialize(response.text)
+
+        log.info "SOAP response for $method:\n${XmlUtil.serialize(response.text)}"
     }
 
     private List<Map> parseDeviceResponses(List<Map> responses) {

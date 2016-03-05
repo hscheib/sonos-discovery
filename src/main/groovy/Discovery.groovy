@@ -1,7 +1,7 @@
 package discovery
 
-import discovery.sonos.SonosDeviceFactory
 import discovery.sonos.SonosSystem
+import discovery.sonos.SonosSystemFactory
 import discovery.sonos.constants.SonosDeviceType
 import groovy.util.logging.Slf4j
 
@@ -9,7 +9,7 @@ import groovy.util.logging.Slf4j
 class Discovery {
     public static void main(String... args) {
         log.info "~~~~ Sonos-Discovery Started ~~~~"
-        SonosSystem sonosSystem = new SonosDeviceFactory().getSonosSystem()
+        SonosSystem sonosSystem = new SonosSystemFactory().getSonosSystem()
 
         if (sonosSystem.allDevices) {
             log.info "Sonos system found with ${sonosSystem.allDevices.size()} devices!"

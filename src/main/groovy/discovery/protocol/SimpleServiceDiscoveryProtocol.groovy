@@ -5,6 +5,8 @@ import groovy.util.logging.Slf4j
 
 import java.util.concurrent.TimeUnit
 
+import static discovery.sonos.SonosSystemFactory.containsIgnoreCase
+
 @Slf4j
 class SimpleServiceDiscoveryProtocol {
 
@@ -12,11 +14,34 @@ class SimpleServiceDiscoveryProtocol {
     public static final int SSDP_UDP_PORT = 1900
     public static final int SSDP_TIMEOUT_IN_SECONDS = 10
     public static final InetSocketAddress SSDP_SOCKET = new InetSocketAddress(SSDP_MULTICAST_IP, SSDP_UDP_PORT)
-
     public static final int LOCALHOST_UDP_PORT = 1901
     public static final InetSocketAddress LOCALHOST_SOCKET = new InetSocketAddress(InetAddress.getLocalHost(), LOCALHOST_UDP_PORT)
 
-    void sendDiscovery() {
+    static List<Map<String, String>> discoverDevicesByServerField(String deviceName) {
+        discoverDevicesByContainsKeyValue("SERVER", deviceName)
+    }
+
+    static List<Map<String, String>> discoverDevicesByContainsKeyValue(String discoveryResponseKey, String deviceIdentifier){
+        sendDiscoveryMulticast()
+        List<DatagramPacket> discoveryResponsePackets = captureDiscoveryResponsePackets(deviceIdentifier)
+
+        List<Map<String, String>> discoveryResponses = []
+        discoveryResponsePackets.each { packet ->
+            Map<String, String> discoveryResponse = parseRawDiscoveryResponseToMap(packet.data)
+
+            boolean responseHasKeyWeCareAbout = discoveryResponse.keySet().any { containsIgnoreCase(it, discoveryResponseKey) }
+            if(responseHasKeyWeCareAbout) {
+                if(deviceIdentifier == '*') {
+                    discoveryResponses << discoveryResponse
+                } else if (containsIgnoreCase(discoveryResponse.get(discoveryResponseKey), deviceIdentifier)) {
+                    discoveryResponses << discoveryResponse
+                }
+            }
+        }
+        return discoveryResponses
+    }
+
+    private static void sendDiscoveryMulticast() {
         MulticastSocket socket = null
         try {
             socket = new MulticastSocket(LOCALHOST_SOCKET)
@@ -51,8 +76,9 @@ class SimpleServiceDiscoveryProtocol {
      * @param deviceType the device type displayed on the desired datagram packet to capture
      * @return a list of maps of key-value discovery responses
      */
-    ArrayList<Map<String, String>> listenForDiscoveryResponses(String deviceType) {
-        ArrayList<Map<String, String>> discoveryResponses = []
+    private static List<DatagramPacket> captureDiscoveryResponsePackets(String deviceType) {
+        List<DatagramPacket> responsePackets = []
+
         MulticastSocket receiveSocket = new MulticastSocket(LOCALHOST_SOCKET)
         receiveSocket.with {
             setTimeToLive(10)
@@ -70,17 +96,14 @@ class SimpleServiceDiscoveryProtocol {
 
                 receiveSocket.receive(datagramPacket)
 
-                Map<String, String> discoveryResponse = parseRawDiscoveryResponseToMap(datagramPacket.data)
-                if (discoveryResponse.SERVER.contains(deviceType)) {
-                    discoveryResponses.add(discoveryResponse)
-                }
+                responsePackets << datagramPacket
             } catch (SocketTimeoutException ignored) { }
         }
 
         receiveSocket.disconnect()
         receiveSocket.close()
 
-        return discoveryResponses
+        return responsePackets
     }
 
     /**

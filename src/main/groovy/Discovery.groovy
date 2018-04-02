@@ -4,6 +4,7 @@ import discovery.sonos.SonosDeviceFactory
 import discovery.sonos.SonosSystem
 import discovery.sonos.constants.SonosDeviceType
 
+import javax.script.Invocable
 import javax.script.ScriptEngine
 import javax.script.ScriptEngineManager
 
@@ -27,6 +28,13 @@ class Discovery {
 
         ScriptEngine engine = new ScriptEngineManager().getEngineByName("nashorn");
         engine.eval(new FileReader("src/main/groovy/discovery/script.js"));
+
+
+        Invocable invocable = (Invocable) engine;
+
+        Object result = invocable.invokeFunction("hello", "Peter Parker");
+        System.out.println(result);
+        System.out.println(result.getClass());
 
         println "Finished"
     }
